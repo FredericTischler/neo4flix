@@ -33,7 +33,7 @@ services:
     build: ./services/api-gateway
     container_name: neo4flix-api-gateway
     ports:
-      - "8080:8080"
+      - "8090:8080"
     environment:
       JWT_SECRET: neo4flix-secret-key-change-in-production
     depends_on:
@@ -55,17 +55,15 @@ services:
       - neo4flix-network
     restart: unless-stopped
 
-  # movie-service:
-  #   build: ./services/movie-service
-  #   container_name: neo4flix-movie-service
-  #   ports:
-  #     - "8082:8082"
-  #   depends_on:
-  #     neo4j:
-  #       condition: service_healthy
-  #   networks:
-  #     - neo4flix-network
-  #   restart: unless-stopped
+  movie-service:
+    build: ./services/movie-service
+    container_name: neo4flix-movie-service
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    restart: unless-stopped
 
   # rating-service:
   #   build: ./services/rating-service

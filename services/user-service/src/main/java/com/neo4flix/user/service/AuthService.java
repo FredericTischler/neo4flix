@@ -5,6 +5,7 @@ import com.neo4flix.user.exception.*;
 import com.neo4flix.user.model.UserEntity;
 import com.neo4flix.user.repository.UserRepository;
 import com.neo4flix.user.validation.PasswordValidator;
+import io.jsonwebtoken.Claims;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,15 +18,18 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final TotpService totpService;
     private final PasswordValidator passwordValidator;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
+                       TotpService totpService,
                        PasswordValidator passwordValidator) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.totpService = totpService;
         this.passwordValidator = passwordValidator;
     }
 
@@ -56,7 +60,7 @@ public class AuthService {
         return new RegisterResponse(user.getUserId(), user.getUsername(), user.getEmail());
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         UserEntity user = userRepository.findByUsername(request.username())
                 .orElseThrow(InvalidCredentialsException::new);
 
@@ -64,9 +68,34 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
 
+        if (user.isTwoFactorEnabled()) {
+            String tempToken = jwtService.generateTempToken(user);
+            return LoginResponse.twoFactorRequired(tempToken);
+        }
+
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
+        return LoginResponse.tokens(accessToken, refreshToken);
+    }
 
+    public AuthResponse verifyTwoFactor(TwoFactorVerifyRequest request) {
+        Claims claims;
+        try {
+            claims = jwtService.validateTempToken(request.tempToken());
+        } catch (Exception e) {
+            throw new InvalidTokenException("Invalid or expired temporary token");
+        }
+
+        String userId = claims.get("userId", String.class);
+        UserEntity user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new InvalidTokenException("User not found"));
+
+        if (!totpService.verifyCode(user.getTotpSecret(), request.code())) {
+            throw new InvalidCredentialsException("Invalid 2FA code");
+        }
+
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
         return new AuthResponse(accessToken, refreshToken);
     }
 
@@ -83,7 +112,6 @@ public class AuthService {
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-
         return new AuthResponse(accessToken, refreshToken);
     }
 }

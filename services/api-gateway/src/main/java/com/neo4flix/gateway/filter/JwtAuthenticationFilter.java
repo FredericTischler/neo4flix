@@ -58,6 +58,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .parseSignedClaims(token)
                     .getPayload();
 
+            String purpose = claims.get("purpose", String.class);
+            if (purpose != null) {
+                return onError(exchange, "Token not valid for API access");
+            }
+
             String userId = claims.get("userId", String.class);
             if (userId == null) {
                 return onError(exchange, "Token missing userId claim");

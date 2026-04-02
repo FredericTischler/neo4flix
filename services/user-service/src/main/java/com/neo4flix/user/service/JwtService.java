@@ -13,8 +13,9 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000L;       // 15 min
+    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000L;           // 15 min
     private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000L; // 7 days
+    private static final long TEMP_TOKEN_EXPIRATION = 5 * 60 * 1000L;              // 5 min
 
     private final SecretKey secretKey;
 
@@ -48,6 +49,17 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateTempToken(UserEntity user) {
+        return Jwts.builder()
+                .subject(user.getUserId())
+                .claim("userId", user.getUserId())
+                .claim("purpose", "2fa")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + TEMP_TOKEN_EXPIRATION))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Claims validateToken(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
@@ -58,5 +70,14 @@ public class JwtService {
 
     public String extractUserId(String token) {
         return validateToken(token).get("userId", String.class);
+    }
+
+    public Claims validateTempToken(String token) {
+        Claims claims = validateToken(token);
+        String purpose = claims.get("purpose", String.class);
+        if (!"2fa".equals(purpose)) {
+            throw new IllegalArgumentException("Token is not a 2FA temporary token");
+        }
+        return claims;
     }
 }
