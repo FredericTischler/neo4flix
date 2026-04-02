@@ -75,17 +75,15 @@ services:
       - neo4flix-network
     restart: unless-stopped
 
-  # recommendation-service:
-  #   build: ./services/recommendation-service
-  #   container_name: neo4flix-recommendation-service
-  #   ports:
-  #     - "8084:8084"
-  #   depends_on:
-  #     neo4j:
-  #       condition: service_healthy
-  #   networks:
-  #     - neo4flix-network
-  #   restart: unless-stopped
+  recommendation-service:
+    build: ./services/recommendation-service
+    container_name: neo4flix-recommendation-service
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    restart: unless-stopped
 
   # =============================================================
   # Frontend Angular

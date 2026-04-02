@@ -19,7 +19,7 @@ spring:
           uri: http://rating-service:8083
           predicates:
             - Path=/api/ratings/**, /api/watchlist/**
-        # - id: recommendation-service
-        #   uri: http://recommendation-service:8084
-        #   predicates:
-        #     - Path=/api/recommendations/**
+        - id: recommendation-service
+          uri: http://recommendation-service:8084
+          predicates:
+            - Path=/api/recommendations/**
