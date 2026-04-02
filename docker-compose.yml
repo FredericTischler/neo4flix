@@ -65,17 +65,15 @@ services:
       - neo4flix-network
     restart: unless-stopped
 
-  # rating-service:
-  #   build: ./services/rating-service
-  #   container_name: neo4flix-rating-service
-  #   ports:
-  #     - "8083:8083"
-  #   depends_on:
-  #     neo4j:
-  #       condition: service_healthy
-  #   networks:
-  #     - neo4flix-network
-  #   restart: unless-stopped
+  rating-service:
+    build: ./services/rating-service
+    container_name: neo4flix-rating-service
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    restart: unless-stopped
 
   # recommendation-service:
   #   build: ./services/recommendation-service
