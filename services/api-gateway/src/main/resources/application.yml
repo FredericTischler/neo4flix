@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: http://user-service:8081
+          predicates:
+            - Path=/api/users/**, /api/auth/**
+        # - id: movie-service
+        #   uri: http://movie-service:8082
+        #   predicates:
+        #     - Path=/api/movies/**, /api/genres/**
+        # - id: rating-service
+        #   uri: http://rating-service:8083
+        #   predicates:
+        #     - Path=/api/ratings/**, /api/watchlist/**
+        # - id: recommendation-service
+        #   uri: http://recommendation-service:8084
+        #   predicates:
+        #     - Path=/api/recommendations/**

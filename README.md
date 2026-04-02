@@ -1,6 +1,6 @@
-# Neo4flix — Phase 0 : Fondations Neo4j
+# Neo4flix
 
-Moteur de recommandation de films basé sur Neo4j et le dataset MovieLens.
+Moteur de recommandation de films basé sur Neo4j, Spring Boot (microservices) et Angular.
 
 ## Prérequis
 
@@ -12,7 +12,7 @@ Moteur de recommandation de films basé sur Neo4j et le dataset MovieLens.
 ### 1. Lancer Neo4j
 
 ```bash
-docker compose -f docker-compose.neo4j.yml up -d
+docker compose up neo4j -d
 ```
 
 ### 2. Importer les données MovieLens
@@ -24,7 +24,7 @@ Le script télécharge automatiquement le dataset, attend que Neo4j soit prêt, 
 ```
 
 L'import crée :
-- **Nœuds** : `User`, `Movie` (avec titre et année), `Genre`
+- **Noeuds** : `User`, `Movie` (avec titre et année), `Genre`
 - **Relations** : `RATED` (score + timestamp), `IN_GENRE`
 
 ### 3. Explorer les données
@@ -34,40 +34,50 @@ Ouvrir le Neo4j Browser : [http://localhost:7474](http://localhost:7474)
 - **Identifiants** : `neo4j` / `neo4flix2024`
 - **Protocole Bolt** : `bolt://localhost:7687`
 
-Les requêtes de référence sont dans `cypher/queries-reference.cypher`. Vous pouvez les copier-coller dans le Neo4j Browser pour les exécuter.
+Les requêtes de référence sont dans `cypher/queries-reference.cypher`.
 
-## Structure du projet
+## Architecture
 
 ```
 neo4flix/
-├── docker-compose.neo4j.yml    # Compose isolé Neo4j + GDS
-├── data/movielens/              # Dataset MovieLens (gitignored, téléchargé par le script)
+├── docker-compose.yml              # Compose projet (Neo4j actif, services commentés)
+├── docker-compose.neo4j.yml        # Compose isolé Neo4j (phase 0)
+├── data/movielens/                  # Dataset MovieLens (gitignored)
 ├── cypher/
-│   ├── import.cypher            # Script d'import du dataset
-│   └── queries-reference.cypher # Requêtes Cypher de référence
+│   ├── import.cypher                # Import du dataset
+│   └── queries-reference.cypher     # Requêtes Cypher de référence
 ├── scripts/
-│   └── init-neo4j.sh            # Script d'initialisation automatique
+│   └── init-neo4j.sh                # Initialisation automatique
+├── services/
+│   ├── api-gateway/                 # Gateway Spring Cloud (port 8080)
+│   ├── user-service/                # Gestion utilisateurs (port 8081)
+│   ├── movie-service/               # Catalogue films (port 8082)
+│   ├── rating-service/              # Notes et avis (port 8083)
+│   └── recommendation-service/      # Recommandations (port 8084)
+├── frontend/                        # Angular
 └── README.md
 ```
 
-## Requêtes disponibles
+## Services
 
-Le fichier `cypher/queries-reference.cypher` contient :
+| Service | Port | Description |
+|---|---|---|
+| Neo4j Browser | 7474 | Interface web Neo4j |
+| Neo4j Bolt | 7687 | Protocole de connexion |
+| API Gateway | 8080 | Point d'entrée unique |
+| User Service | 8081 | Gestion des utilisateurs |
+| Movie Service | 8082 | Catalogue de films |
+| Rating Service | 8083 | Notes et avis |
+| Recommendation Service | 8084 | Moteur de recommandation |
 
-- **Recherche** : trouver un film par titre, lister par genre, historique utilisateur
-- **Collaborative filtering** : recommandations basées sur les goûts d'utilisateurs similaires
-- **Content-based** : recommandations par genres préférés
-- **Top films** : classement par note moyenne avec seuil minimum de votes
-- **GDS** : projection in-memory, similarité Jaccard, voisins les plus proches
-
-## Arrêter Neo4j
+## Arrêter le projet
 
 ```bash
-docker compose -f docker-compose.neo4j.yml down
+docker compose down
 ```
 
 Pour supprimer aussi les données persistées :
 
 ```bash
-docker compose -f docker-compose.neo4j.yml down -v
+docker compose down -v
 ```

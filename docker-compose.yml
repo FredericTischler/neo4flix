@@ -1,0 +1,129 @@
+services:
+  # =============================================================
+  # Neo4j — base de données graphe + plugin Graph Data Science
+  # =============================================================
+  neo4j:
+    image: neo4j:5-community
+    container_name: neo4flix-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neo4flix2024
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_server_directories_import: /var/lib/neo4j/import
+      NEO4J_dbms_security_allow__csv__import__from__file__urls: "true"
+    volumes:
+      - neo4j_data:/data
+      - ./data/movielens:/var/lib/neo4j/import/movielens
+    networks:
+      - neo4flix-network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4flix2024", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # =============================================================
+  # Microservices Spring Boot (à implémenter)
+  # =============================================================
+
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: neo4flix-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: neo4flix-secret-key-change-in-production
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    restart: unless-stopped
+
+  user-service:
+    build: ./services/user-service
+    container_name: neo4flix-user-service
+    environment:
+      JWT_SECRET: neo4flix-secret-key-change-in-production
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    restart: unless-stopped
+
+  # movie-service:
+  #   build: ./services/movie-service
+  #   container_name: neo4flix-movie-service
+  #   ports:
+  #     - "8082:8082"
+  #   depends_on:
+  #     neo4j:
+  #       condition: service_healthy
+  #   networks:
+  #     - neo4flix-network
+  #   restart: unless-stopped
+
+  # rating-service:
+  #   build: ./services/rating-service
+  #   container_name: neo4flix-rating-service
+  #   ports:
+  #     - "8083:8083"
+  #   depends_on:
+  #     neo4j:
+  #       condition: service_healthy
+  #   networks:
+  #     - neo4flix-network
+  #   restart: unless-stopped
+
+  # recommendation-service:
+  #   build: ./services/recommendation-service
+  #   container_name: neo4flix-recommendation-service
+  #   ports:
+  #     - "8084:8084"
+  #   depends_on:
+  #     neo4j:
+  #       condition: service_healthy
+  #   networks:
+  #     - neo4flix-network
+  #   restart: unless-stopped
+
+  # =============================================================
+  # Frontend Angular
+  # =============================================================
+
+  # frontend:
+  #   build: ./frontend
+  #   container_name: neo4flix-frontend
+  #   depends_on:
+  #     - api-gateway
+  #   networks:
+  #     - neo4flix-network
+  #   restart: unless-stopped
+
+  # =============================================================
+  # Reverse proxy SSL
+  # =============================================================
+
+  # nginx-ssl:
+  #   image: nginx:alpine
+  #   container_name: neo4flix-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   depends_on:
+  #     - frontend
+  #     - api-gateway
+  #   networks:
+  #     - neo4flix-network
+  #   restart: unless-stopped
+
+networks:
+  neo4flix-network:
+    driver: bridge
+
+volumes:
+  neo4j_data:

@@ -1,3 +1,6 @@
+# IDE
+.idea/
+
 # MovieLens dataset (téléchargé par le script)
 data/movielens/*.csv
 
