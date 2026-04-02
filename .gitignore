@@ -1,3 +1,6 @@
+# MovieLens dataset (téléchargé par le script)
+data/movielens/*.csv
+
 # Logs
 logs
 *.log
