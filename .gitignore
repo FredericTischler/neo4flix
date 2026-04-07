@@ -1,6 +1,10 @@
 # IDE
 .idea/
 
+# Claude Code
+.claude/
+CLAUDE.md
+
 # MovieLens dataset (téléchargé par le script)
 data/movielens/*.csv
 
