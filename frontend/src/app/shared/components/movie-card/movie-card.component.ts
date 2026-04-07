@@ -4,6 +4,13 @@ import { RouterLink } from '@angular/router';
 import { Movie } from '../../../core/models/movie.model';
 import { WatchlistService } from '../../../core/services/watchlist.service';
 
+const SOURCE_COLORS: Record<string, string> = {
+  collaborative: 'bg-blue-900/60 text-blue-300',
+  'content-based': 'bg-green-900/60 text-green-300',
+  gds: 'bg-purple-900/60 text-purple-300',
+  popular: 'bg-gray-700/60 text-gray-300',
+};
+
 @Component({
   selector: 'app-movie-card',
   standalone: true,
@@ -37,6 +44,15 @@ import { WatchlistService } from '../../../core/services/watchlist.service';
             </div>
             <span class="text-xs text-gray-500">{{ movie().voteCount }} votes</span>
           </div>
+          @if (sources().length > 0) {
+            <div class="flex flex-wrap gap-1 pt-1">
+              @for (source of sources(); track source) {
+                <span class="px-1.5 py-0.5 text-[10px] rounded-md" [class]="sourceColor(source)">
+                  {{ source }}
+                </span>
+              }
+            </div>
+          }
         </div>
       </a>
 
@@ -59,7 +75,12 @@ import { WatchlistService } from '../../../core/services/watchlist.service';
 })
 export default class MovieCardComponent implements OnInit {
   movie = input.required<Movie>();
+  sources = input<string[]>([]);
   private watchlistService = inject(WatchlistService);
+
+  sourceColor(source: string): string {
+    return SOURCE_COLORS[source] ?? 'bg-gray-700/60 text-gray-300';
+  }
 
   inWatchlist = signal(false);
 
