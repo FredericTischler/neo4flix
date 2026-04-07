@@ -25,6 +25,8 @@ export const routes: Routes = [
     children: [
       { path: 'home', loadComponent: () => import('./features/home/home.component') },
       { path: 'search', loadComponent: () => import('./features/search/search.component') },
+      { path: 'movies/:movieId', loadComponent: () => import('./features/movie-detail/movie-detail.component') },
+      { path: 'watchlist', loadComponent: () => import('./features/watchlist/watchlist.component') },
       { path: '', redirectTo: 'home', pathMatch: 'full' },
     ],
   },
