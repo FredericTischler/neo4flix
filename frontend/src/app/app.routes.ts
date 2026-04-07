@@ -18,11 +18,15 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/verify-2fa/verify-2fa.component'),
     canActivate: [guestGuard],
   },
-  // Protected routes — added in later phases:
-  // { path: 'home', loadComponent: () => ..., canActivate: [authGuard] },
-  // { path: 'movies/:id', loadComponent: () => ..., canActivate: [authGuard] },
-  // { path: 'recommendations', loadComponent: () => ..., canActivate: [authGuard] },
-  // { path: 'watchlist', loadComponent: () => ..., canActivate: [authGuard] },
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  {
+    path: '',
+    loadComponent: () => import('./layout/layout.component'),
+    canActivate: [authGuard],
+    children: [
+      { path: 'home', loadComponent: () => import('./features/home/home.component') },
+      { path: 'search', loadComponent: () => import('./features/search/search.component') },
+      { path: '', redirectTo: 'home', pathMatch: 'full' },
+    ],
+  },
   { path: '**', redirectTo: 'login' },
 ];
