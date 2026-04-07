@@ -67,7 +67,7 @@ MERGE (m)-[:IN_GENRE]->(g);
 // 5. Import des utilisateurs et des notes (ratings.csv)
 // ----------------------------------------------------------
 
-:auto LOAD CSV WITH HEADERS FROM 'file:///movielens/ratings.csv' AS row
+LOAD CSV WITH HEADERS FROM 'file:///movielens/ratings.csv' AS row
 CALL {
   WITH row
   MERGE (u:User {userId: row.userId})

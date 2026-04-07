@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, shareReplay, of, catchError } from 'rxjs';
 import { TokenService } from './token.service';
 import { UserProfile } from '../models/user.model';
 import {
@@ -23,11 +23,7 @@ export class AuthService {
   isLoggedIn = computed(() => this.currentUser() !== null);
   tempToken = signal<string | null>(null);
 
-  constructor() {
-    if (this.tokenService.isAuthenticated()) {
-      this.loadProfile();
-    }
-  }
+  private profileLoad$: Observable<UserProfile> | null = null;
 
   register(req: RegisterRequest): Observable<UserProfile> {
     return this.http.post<UserProfile>('/api/auth/register', req);
@@ -40,7 +36,8 @@ export class AuthService {
           this.tempToken.set(res.tempToken);
         } else {
           this.tokenService.setTokens(res.accessToken, res.refreshToken);
-          this.loadProfile();
+          this.profileLoad$ = null;
+          this.ensureProfile().subscribe();
         }
       })
     );
@@ -51,7 +48,8 @@ export class AuthService {
       tap((res) => {
         this.tokenService.setTokens(res.accessToken, res.refreshToken);
         this.tempToken.set(null);
-        this.loadProfile();
+        this.profileLoad$ = null;
+        this.ensureProfile().subscribe();
       })
     );
   }
@@ -71,13 +69,30 @@ export class AuthService {
     this.tokenService.removeTokens();
     this.currentUser.set(null);
     this.tempToken.set(null);
+    this.profileLoad$ = null;
     this.router.navigate(['/login']);
   }
 
-  loadProfile(): void {
-    this.http.get<UserProfile>('/api/users/me').subscribe({
-      next: (user) => this.currentUser.set(user),
-      error: () => this.logout(),
-    });
+  /**
+   * Returns a shared Observable that loads the profile once.
+   * Multiple callers (guard, constructor) share the same HTTP call.
+   */
+  ensureProfile(): Observable<UserProfile> {
+    if (this.currentUser()) {
+      return of(this.currentUser()!);
+    }
+
+    if (!this.profileLoad$) {
+      this.profileLoad$ = this.http.get<UserProfile>('/api/users/me').pipe(
+        tap((user) => this.currentUser.set(user)),
+        catchError((err) => {
+          this.profileLoad$ = null;
+          throw err;
+        }),
+        shareReplay(1)
+      );
+    }
+
+    return this.profileLoad$;
   }
 }
