@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@source "..";
+@plugin "@tailwindcss/forms";
+
+body {
+  background-color: var(--color-gray-950);
+  color: var(--color-gray-100);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
