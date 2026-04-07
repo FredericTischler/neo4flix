@@ -1,3 +1,6 @@
+# SSL certificates
+nginx/ssl/
+
 # IDE
 .idea/
 

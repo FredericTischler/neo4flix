@@ -7,9 +7,8 @@ services:
     container_name: neo4flix-neo4j
     ports:
       - "7474:7474"
-      - "7687:7687"
     environment:
-      NEO4J_AUTH: neo4j/neo4flix2024
+      NEO4J_AUTH: ${NEO4J_AUTH}
       NEO4J_PLUGINS: '["graph-data-science"]'
       NEO4J_server_directories_import: /var/lib/neo4j/import
       NEO4J_dbms_security_allow__csv__import__from__file__urls: "true"
@@ -19,101 +18,152 @@ services:
     networks:
       - neo4flix-network
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4flix2024", "RETURN 1"]
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "${NEO4J_PASSWORD}", "RETURN 1"]
       interval: 10s
       timeout: 5s
       retries: 10
     restart: unless-stopped
 
   # =============================================================
-  # Microservices Spring Boot (à implémenter)
+  # Microservices Spring Boot
   # =============================================================
-
-  api-gateway:
-    build: ./services/api-gateway
-    container_name: neo4flix-api-gateway
-    ports:
-      - "8090:8080"
-    environment:
-      JWT_SECRET: neo4flix-secret-key-change-in-production
-    depends_on:
-      neo4j:
-        condition: service_healthy
-    networks:
-      - neo4flix-network
-    restart: unless-stopped
 
   user-service:
     build: ./services/user-service
     container_name: neo4flix-user-service
     environment:
-      JWT_SECRET: neo4flix-secret-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET}
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: ${NEO4J_PASSWORD}
     depends_on:
       neo4j:
         condition: service_healthy
     networks:
       - neo4flix-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   movie-service:
     build: ./services/movie-service
     container_name: neo4flix-movie-service
+    environment:
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: ${NEO4J_PASSWORD}
     depends_on:
       neo4j:
         condition: service_healthy
     networks:
       - neo4flix-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   rating-service:
     build: ./services/rating-service
     container_name: neo4flix-rating-service
+    environment:
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: ${NEO4J_PASSWORD}
     depends_on:
       neo4j:
         condition: service_healthy
     networks:
       - neo4flix-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   recommendation-service:
     build: ./services/recommendation-service
     container_name: neo4flix-recommendation-service
+    environment:
+      SPRING_NEO4J_URI: bolt://neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: ${NEO4J_PASSWORD}
     depends_on:
       neo4j:
         condition: service_healthy
     networks:
       - neo4flix-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: neo4flix-api-gateway
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      user-service:
+        condition: service_healthy
+      movie-service:
+        condition: service_healthy
+      rating-service:
+        condition: service_healthy
+      recommendation-service:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   # =============================================================
   # Frontend Angular
   # =============================================================
 
-  # frontend:
-  #   build: ./frontend
-  #   container_name: neo4flix-frontend
-  #   depends_on:
-  #     - api-gateway
-  #   networks:
-  #     - neo4flix-network
-  #   restart: unless-stopped
+  frontend:
+    build: ./frontend
+    container_name: neo4flix-frontend
+    depends_on:
+      - api-gateway
+    networks:
+      - neo4flix-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
 
   # =============================================================
   # Reverse proxy SSL
   # =============================================================
 
-  # nginx-ssl:
-  #   image: nginx:alpine
-  #   container_name: neo4flix-nginx
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   depends_on:
-  #     - frontend
-  #     - api-gateway
-  #   networks:
-  #     - neo4flix-network
-  #   restart: unless-stopped
+  nginx-ssl:
+    build: ./nginx
+    container_name: neo4flix-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - neo4flix-network
+    restart: unless-stopped
 
 networks:
   neo4flix-network:

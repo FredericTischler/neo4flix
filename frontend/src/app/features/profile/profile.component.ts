@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { RatingService } from '../../core/services/rating.service';
 import { WatchlistService } from '../../core/services/watchlist.service';
+import QRCode from 'qrcode';
 
 @Component({
   selector: 'app-profile',
@@ -121,14 +122,17 @@ import { WatchlistService } from '../../core/services/watchlist.service';
 
           @if (qrCodeUri()) {
             <div class="space-y-4">
-              <p class="text-sm text-gray-300">Scan this code with your authenticator app, or copy the secret below:</p>
-              <div class="p-4 bg-gray-800 rounded-lg border border-gray-700 break-all">
-                <code class="text-sm text-gray-200">{{ qrCodeUri() }}</code>
-              </div>
-              <div class="flex gap-2">
+              <p class="text-sm text-gray-300">Scan this code with your authenticator app:</p>
+              @if (qrCodeDataUrl()) {
+                <div class="flex justify-center p-4 bg-white rounded-lg w-fit mx-auto">
+                  <img [src]="qrCodeDataUrl()" alt="QR Code" class="w-48 h-48" />
+                </div>
+              }
+              <div class="flex items-center gap-2">
+                <p class="text-xs text-gray-500 truncate flex-1">{{ qrCodeUri() }}</p>
                 <button
                   (click)="copySecret()"
-                  class="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-300 text-xs border border-gray-700 hover:bg-gray-700 transition-colors"
+                  class="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-300 text-xs border border-gray-700 hover:bg-gray-700 transition-colors shrink-0"
                 >
                   {{ secretCopied() ? 'Copied!' : 'Copy' }}
                 </button>
@@ -209,6 +213,7 @@ export default class ProfileComponent implements OnInit {
   saveSuccess = signal(false);
 
   qrCodeUri = signal<string | null>(null);
+  qrCodeDataUrl = signal<string | null>(null);
   showConfirm2fa = signal(false);
   totpCode = signal('');
   tfaError = signal('');
@@ -257,12 +262,14 @@ export default class ProfileComponent implements OnInit {
   }
 
   enable2fa(): void {
-    this.http.post<{ otpauthUri: string }>('/api/users/me/enable-2fa', {}).subscribe({
+    this.http.post<{ qrCodeUri: string }>('/api/users/me/enable-2fa', {}).subscribe({
       next: (res) => {
-        this.qrCodeUri.set(res.otpauthUri);
+        this.qrCodeUri.set(res.qrCodeUri);
         this.showConfirm2fa.set(false);
         this.totpCode.set('');
         this.tfaError.set('');
+        QRCode.toDataURL(res.qrCodeUri, { width: 200, margin: 1 })
+          .then(url => this.qrCodeDataUrl.set(url));
       },
       error: () => this.tfaError.set('Failed to enable 2FA'),
     });
@@ -277,6 +284,7 @@ export default class ProfileComponent implements OnInit {
           this.authService.currentUser.set({ ...user, twoFactorEnabled: true });
         }
         this.qrCodeUri.set(null);
+        this.qrCodeDataUrl.set(null);
         this.showConfirm2fa.set(false);
         this.totpCode.set('');
       },
